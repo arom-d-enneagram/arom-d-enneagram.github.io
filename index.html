@@ -1047,23 +1047,34 @@ async function submitSurvey(){
 
 /* ---------- 결과 ---------- */
 function radarSVG(scores){
+  const VB=420, cx=VB/2, cy=VB/2, R=120, maxScore=45, n=9;
   const ORDER = [9,1,2,3,4,5,6,7,8];
-  const W = 400;
-  let y = 40;
-  const parts = [];
-  const T=(x,yy,s,opt={})=>`<text x="${x}" y="${yy}" font-family="'Noto Sans KR',sans-serif" font-size="${opt.size||16}" fill="${opt.color||'#20242b'}" text-anchor="${opt.anchor||'start'}" font-weight="${opt.weight||400}">${esc(s)}</text>`;
-  
-  parts.push(T(W/2, y, '유형 분포', {size:18, weight:700, anchor:'middle'})); y+=8;
-  
-  ORDER.forEach(id=>{
-    y+=28;
-    const t = TYPES.find(x=>x.id===id);
-    parts.push(T(W/2, y, `${id} ${t.name}`, {size:14, weight:600, anchor:'middle'}));
+  const angle = i => (Math.PI*2*i/n) - Math.PI/2;
+  const pt = (i,r) => [cx + r*Math.cos(angle(i)), cy + r*Math.sin(angle(i))];
+
+  let rings='';
+  [0.25,0.5,0.75,1].forEach(f=>{
+    let pts=[]; for(let i=0;i<n;i++){ const [x,y]=pt(i,R*f); pts.push(`${x},${y}`); }
+    rings += `<polygon points="${pts.join(' ')}" fill="none" stroke="#d9d0bd" stroke-width="1"/>`;
   });
-  
-  y+=40;
-  const H = y;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#f6f2ea"/>${parts.join('')}</svg>`;
+
+  let spokes='', labels='';
+  for(let i=0;i<n;i++){
+    const [x,y]=pt(i,R);
+    spokes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#d9d0bd" stroke-width="1"/>`;
+    const t = TYPES.find(v=>v.id===ORDER[i]);
+    const [lx,ly] = pt(i, R+34);
+    const c = Math.cos(angle(i));
+    let anchor = 'middle';
+    if(c > 0.3) anchor='start'; else if(c < -0.3) anchor='end';
+    labels += `<text x="${lx}" y="${ly-6}" font-size="15" font-weight="700" text-anchor="${anchor}" fill="#232946" font-family="'Noto Sans KR',sans-serif">${ORDER[i]}</text>`;
+    labels += `<text x="${lx}" y="${ly+11}" font-size="12" font-weight="500" text-anchor="${anchor}" fill="#5a5550" font-family="'Noto Sans KR',sans-serif">${t.name}</text>`;
+  }
+
+  let dp=[]; for(let i=0;i<n;i++){ dp.push(pt(i, ((scores[ORDER[i]]||0)/maxScore)*R)); }
+  const poly = dp.map(p=>p.join(',')).join(' ');
+  const dots = dp.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${typeColor(ORDER[i])}"/>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${VB}" height="${VB}" viewBox="0 0 ${VB} ${VB}"><rect width="${VB}" height="${VB}" fill="#f6f2ea"/>${rings}${spokes}<polygon points="${poly}" fill="rgba(35,41,70,0.18)" stroke="#232946" stroke-width="2"/>${dots}${labels}</svg>`;
 }
 
 function buildPrintContent(rec){
@@ -1190,7 +1201,7 @@ function buildResultSVG(rec){
   
   // 레이더 차트
   const chart = radarSVG(rec.scores).replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'');
-  parts.push(`<g transform="translate(${(W-320)/2}, ${y})">${chart}</g>`); y+=340;
+  parts.push(`<g transform="translate(${(W-420)/2}, ${y})">${chart}</g>`); y+=440;
   
   // 점수 프로파일
   const lineChart = profileLineSVG([{scores:rec.scores, color:'#1f4fd8'}]).replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'');
@@ -1425,14 +1436,37 @@ function renderResult(app){
 }
 
 function drawRadar(container, scores){
+  // viewBox를 크게 잡아 라벨이 절대 잘리지 않게 함
+  const VB=420, cx=VB/2, cy=VB/2, R=120, maxScore=45, n=9;
   const ORDER = [9,1,2,3,4,5,6,7,8];
-  let html = `<div style="text-align:center;padding:20px 0;">`;
-  ORDER.forEach(id=>{
-    const t = TYPES.find(x=>x.id===id);
-    html += `<div style="margin:12px 0;font-size:16px;font-weight:600;color:var(--navy);">${id} ${t.name}</div>`;
+  const angle = i => (Math.PI*2*i/n) - Math.PI/2;
+  const pt = (i,r) => [cx + r*Math.cos(angle(i)), cy + r*Math.sin(angle(i))];
+
+  let rings='';
+  [0.25,0.5,0.75,1].forEach(f=>{
+    let pts=[]; for(let i=0;i<n;i++){ const [x,y]=pt(i,R*f); pts.push(`${x},${y}`); }
+    rings += `<polygon points="${pts.join(' ')}" fill="none" stroke="#d9d0bd" stroke-width="1"/>`;
   });
-  html += `</div>`;
-  container.innerHTML = html;
+
+  let spokes='', labels='';
+  for(let i=0;i<n;i++){
+    const [x,y]=pt(i,R);
+    spokes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#d9d0bd" stroke-width="1"/>`;
+    const t = TYPES.find(v=>v.id===ORDER[i]);
+    const [lx,ly] = pt(i, R+34);
+    const c = Math.cos(angle(i)), s = Math.sin(angle(i));
+    let anchor = 'middle';
+    if(c > 0.3) anchor='start'; else if(c < -0.3) anchor='end';
+    // 숫자(위)와 유형명(아래) 두 줄로 배치
+    labels += `<text x="${lx}" y="${ly-6}" font-size="15" font-weight="700" text-anchor="${anchor}" fill="#232946" font-family="Noto Sans KR, sans-serif">${ORDER[i]}</text>`;
+    labels += `<text x="${lx}" y="${ly+11}" font-size="12" font-weight="500" text-anchor="${anchor}" fill="#5a5550" font-family="Noto Sans KR, sans-serif">${t.name}</text>`;
+  }
+
+  let dp=[]; for(let i=0;i<n;i++){ dp.push(pt(i, ((scores[ORDER[i]]||0)/maxScore)*R)); }
+  const poly = dp.map(p=>p.join(',')).join(' ');
+  const dots = dp.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${typeColor(ORDER[i])}"/>`).join('');
+
+  container.innerHTML = `<svg width="100%" viewBox="0 0 ${VB} ${VB}" style="max-width:420px;display:block;margin:0 auto;">${rings}${spokes}<polygon points="${poly}" fill="rgba(35,41,70,0.18)" stroke="#232946" stroke-width="2"/>${dots}${labels}</svg>`;
 }
 
 /* ---------- 커플 프로파일 ---------- */
