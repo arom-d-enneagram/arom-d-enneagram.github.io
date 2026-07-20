@@ -1062,23 +1062,23 @@ function radarSVG(scores){
     const [x,y]=pt(i,R);
     spokes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#d9d0bd" stroke-width="1"/>`;
     const typeObj = TYPES.find(t=>t.id===ORDER[i]);
-    const typeLabel = `${ORDER[i]}${typeObj?.name||''}`;
+    const typeLabel = `${ORDER[i]} ${typeObj?.name||''}`;
     
-    // 각 방향별 라벨 거리와 정렬 조정
-    let lx, ly, anchor='middle', baseline='middle', offset=24;
+    // 각 방향별 라벨 거리와 정렬 조정 (숫자와 더 멀리 떨어뜨림)
+    let lx, ly, anchor='middle', baseline='middle', offset=36;
     const ang = angle(i);
     
-    // 12시 방향 (i=0 또는 근처): 위쪽
-    if(i===0) { offset=28; baseline='bottom'; ly=cy + R*Math.sin(ang) - offset; }
+    // 12시 방향 (i=0): 위쪽
+    if(i===0) { offset=42; baseline='bottom'; ly=cy + R*Math.sin(ang) - offset; lx=cx + R*Math.cos(ang); }
     // 3시 방향 (i=2): 우측
-    else if(i===2) { offset=22; anchor='start'; lx=cx + R*Math.cos(ang) + offset; }
+    else if(i===2) { offset=36; anchor='start'; lx=cx + R*Math.cos(ang) + offset; ly=cy + R*Math.sin(ang); }
     // 6시 방향 (i=4): 아래쪽
-    else if(i===4) { offset=28; baseline='top'; ly=cy + R*Math.sin(ang) + offset; }
+    else if(i===4) { offset=42; baseline='top'; ly=cy + R*Math.sin(ang) + offset; lx=cx + R*Math.cos(ang); }
     // 9시 방향 (i=6): 좌측
-    else if(i===6) { offset=22; anchor='end'; lx=cx + R*Math.cos(ang) - offset; }
+    else if(i===6) { offset=36; anchor='end'; lx=cx + R*Math.cos(ang) - offset; ly=cy + R*Math.sin(ang); }
     // 기타 방향
     else {
-      const [lx_tmp, ly_tmp] = pt(i, R+24);
+      const [lx_tmp, ly_tmp] = pt(i, R+36);
       lx = lx_tmp; ly = ly_tmp;
     }
     
@@ -1472,21 +1472,21 @@ function drawRadar(container, scores){
     const typeObj = TYPES.find(t=>t.id===ORDER[i]);
     const typeLabel = `${ORDER[i]}${typeObj?.name||''}`;
     
-    // 각 방향별 라벨 거리와 정렬 조정
-    let lx, ly, anchor='middle', baseline='middle', offset=24;
+    // 각 방향별 라벨 거리와 정렬 조정 (숫자와 더 멀리 떨어뜨림)
+    let lx, ly, anchor='middle', baseline='middle', offset=36;
     const ang = angle(i);
     
     // 12시 방향 (i=0): 위쪽
-    if(i===0) { offset=28; baseline='bottom'; ly=cy + R*Math.sin(ang) - offset; lx=cx + R*Math.cos(ang); }
+    if(i===0) { offset=42; baseline='bottom'; ly=cy + R*Math.sin(ang) - offset; lx=cx + R*Math.cos(ang); }
     // 3시 방향 (i=2): 우측
-    else if(i===2) { offset=22; anchor='start'; lx=cx + R*Math.cos(ang) + offset; ly=cy + R*Math.sin(ang); }
+    else if(i===2) { offset=36; anchor='start'; lx=cx + R*Math.cos(ang) + offset; ly=cy + R*Math.sin(ang); }
     // 6시 방향 (i=4): 아래쪽
-    else if(i===4) { offset=28; baseline='top'; ly=cy + R*Math.sin(ang) + offset; lx=cx + R*Math.cos(ang); }
+    else if(i===4) { offset=42; baseline='top'; ly=cy + R*Math.sin(ang) + offset; lx=cx + R*Math.cos(ang); }
     // 9시 방향 (i=6): 좌측
-    else if(i===6) { offset=22; anchor='end'; lx=cx + R*Math.cos(ang) - offset; ly=cy + R*Math.sin(ang); }
+    else if(i===6) { offset=36; anchor='end'; lx=cx + R*Math.cos(ang) - offset; ly=cy + R*Math.sin(ang); }
     // 기타 방향
     else {
-      const [lx_tmp, ly_tmp] = pt(i, R+24);
+      const [lx_tmp, ly_tmp] = pt(i, R+36);
       lx = lx_tmp; ly = ly_tmp;
     }
     
