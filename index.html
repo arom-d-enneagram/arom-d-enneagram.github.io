@@ -1381,19 +1381,55 @@ function buildCoupleSVG(){
   const chartInner = coupleLineSVG(a.scores,b.scores).replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'');
   // coupleLineSVG viewBox 720x560 → 스케일 맞춰 삽입
   parts.push(`<g transform="translate(${(W-740)/2}, ${y})">${chartInner}</g>`); y+=575;
-  // 개인 요약 2단
+  // 개인 요약 2단 (결과지와 동일 수준: 특징 전체 + 강점/약점 박스 + 변화방향 박스 + 좌우명)
   function summaryBlock(x, k, name, color){
     let yy=y; const lines=[]; const colW=(W-100)/2;
-    lines.push(`<rect x="${x}" y="${yy}" width="${colW}" height="4" fill="${color}"/>`); yy+=24;
-    wrapSvgText(`${name} · ${k.label}`, 20).forEach(ln=>{ lines.push(T(x,yy,ln,{size:13,weight:700,color})); yy+=18; });
-    wrapSvgText(k.desc, 22).slice(0,5).forEach(ln=>{ lines.push(T(x,yy,ln,{size:11,color:'#555'})); yy+=15; });
-    yy+=4;
-    lines.push(T(x,yy,'강점',{size:11.5,weight:700,color:'#2a7d4f'}));yy+=15;
-    wrapSvgText(k.strength,24).forEach(ln=>{lines.push(T(x,yy,ln,{size:11,color:'#444'}));yy+=14;});
-    lines.push(T(x,yy,'약점',{size:11.5,weight:700,color:'#b5462f'}));yy+=15;
-    wrapSvgText(k.weakness,24).forEach(ln=>{lines.push(T(x,yy,ln,{size:11,color:'#444'}));yy+=14;});
-    yy+=2;
-    wrapSvgText(`좌우명: ${k.motto}`,22).forEach(ln=>{lines.push(T(x,yy,ln,{size:11,color:'#b9812f'}));yy+=15;});
+    const charW = Math.floor((colW-4) / 11.5);
+    lines.push(`<rect x="${x}" y="${yy}" width="${colW}" height="4" rx="2" fill="${color}"/>`); yy+=22;
+    lines.push(T(x,yy,`${name} · ${k.label}`,{size:14,weight:700,color})); yy+=22;
+
+    // 특징 (전체)
+    lines.push(T(x,yy,'특징',{size:10.5,weight:700,color:'#7a7266'})); yy+=14;
+    wrapSvgText(k.desc, charW).forEach(ln=>{ lines.push(T(x,yy,ln,{size:10.5,color:'#444'})); yy+=14; });
+    yy+=6;
+
+    // 강점 박스
+    const sLines = wrapSvgText(k.strength, charW-2);
+    const sH = 26 + sLines.length*13 + 8;
+    lines.push(`<rect x="${x}" y="${yy}" width="${colW}" height="${sH}" rx="6" fill="#f0f5f0" stroke="#2a7d4f" stroke-width="1.2"/>`);
+    lines.push(T(x+10,yy+17,'✓ 강점',{size:10.5,weight:700,color:'#2a7d4f'}));
+    let sy=yy+30; sLines.forEach(ln=>{ lines.push(T(x+10,sy,ln,{size:10.5,color:'#333'})); sy+=13; });
+    yy += sH + 8;
+
+    // 약점 박스
+    const wLines = wrapSvgText(k.weakness, charW-2);
+    const wH = 26 + wLines.length*13 + 8;
+    lines.push(`<rect x="${x}" y="${yy}" width="${colW}" height="${wH}" rx="6" fill="#faf0f0" stroke="#b5462f" stroke-width="1.2"/>`);
+    lines.push(T(x+10,yy+17,'✗ 약점',{size:10.5,weight:700,color:'#b5462f'}));
+    let wy=yy+30; wLines.forEach(ln=>{ lines.push(T(x+10,wy,ln,{size:10.5,color:'#333'})); wy+=13; });
+    yy += wH + 8;
+
+    // 변화방향 안정 박스
+    const gLines = wrapSvgText(k.growthDesc||'', charW-2);
+    const gH = 26 + gLines.length*13 + 8;
+    lines.push(`<rect x="${x}" y="${yy}" width="${colW}" height="${gH}" rx="6" fill="#f0f5f0" stroke="#2a7d4f" stroke-width="1.2"/>`);
+    lines.push(T(x+10,yy+17,'😊 안정될 때',{size:10.5,weight:700,color:'#2a7d4f'}));
+    let gy=yy+30; gLines.forEach(ln=>{ lines.push(T(x+10,gy,ln,{size:10.5,color:'#333'})); gy+=13; });
+    yy += gH + 8;
+
+    // 변화방향 스트레스 박스
+    const stLines = wrapSvgText(k.stressDesc||'', charW-2);
+    const stH = 26 + stLines.length*13 + 8;
+    lines.push(`<rect x="${x}" y="${yy}" width="${colW}" height="${stH}" rx="6" fill="#faf0f0" stroke="#b5462f" stroke-width="1.2"/>`);
+    lines.push(T(x+10,yy+17,'😰 스트레스 받을 때',{size:10.5,weight:700,color:'#b5462f'}));
+    let sty=yy+30; stLines.forEach(ln=>{ lines.push(T(x+10,sty,ln,{size:10.5,color:'#333'})); sty+=13; });
+    yy += stH + 8;
+
+    // 좌우명
+    lines.push(`<rect x="${x}" y="${yy}" width="${colW}" height="34" rx="6" fill="rgba(185,129,47,0.1)" stroke="rgba(185,129,47,0.3)" stroke-width="1"/>`);
+    lines.push(T(x+colW/2,yy+21,`"${k.motto}"`,{size:11,weight:600,color:'#b9812f',anchor:'middle'}));
+    yy += 42;
+
     return {svg:lines.join(''), endY:yy};
   }
   const left = summaryBlock(50, ka, a.name, '#1f4fd8');
