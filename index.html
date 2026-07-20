@@ -1114,10 +1114,17 @@ function buildPrintContent(rec){
 function wrapSvgText(text, maxChars){
   const words = String(text).split(' ');
   const lines = []; let cur = '';
-  words.forEach(w=>{
+  const pushWord = (w)=>{
+    // 한 단어가 최대 글자수보다 길면 강제로 잘라 넣음
+    while(w.length > maxChars){
+      if(cur){ lines.push(cur); cur=''; }
+      lines.push(w.slice(0, maxChars));
+      w = w.slice(maxChars);
+    }
     if((cur+' '+w).trim().length > maxChars){ if(cur) lines.push(cur); cur = w; }
     else cur = (cur? cur+' ':'')+w;
-  });
+  };
+  words.forEach(pushWord);
   if(cur) lines.push(cur);
   return lines;
 }
@@ -1218,18 +1225,30 @@ function buildResultSVG(rec){
   wrapSvgText(k.desc, 60).forEach(ln=>{ parts.push(T(40,y,ln,{size:12,color:'#444'})); y+=16; });
   y+=4;
   
-  // 강점/약점 2단
-  parts.push(`<rect x="40" y="${y}" width="${(W-80)/2-8}" height="4" rx="2" fill="#2a7d4f"/>`);
-  parts.push(T(40,y+12,'강점',{size:11,weight:700,color:'#2a7d4f'})); 
-  let yy = y+26;
-  wrapSvgText(k.strength, 30).forEach(ln=>{ parts.push(T(40,yy,ln,{size:11,color:'#444'})); yy+=14; });
-  
-  const rightX = 40 + (W-80)/2 + 8;
-  parts.push(`<rect x="${rightX}" y="${y}" width="${(W-80)/2-8}" height="4" rx="2" fill="#b5462f"/>`);
-  parts.push(T(rightX,y+12,'약점',{size:11,weight:700,color:'#b5462f'}));
-  let yy2 = y+26;
-  wrapSvgText(k.weakness, 30).forEach(ln=>{ parts.push(T(rightX,yy2,ln,{size:11,color:'#444'})); yy2+=14; });
-  y = Math.max(yy, yy2) + 8;
+  // 강점/약점 2단 (테두리 박스로 구분, 전체 텍스트 표시)
+  const colW = (W-80)/2 - 8;       // 각 박스 폭
+  const boxPadX = 12, boxPadTop = 30, boxPadBot = 12;
+  const charPerLine = Math.floor((colW - boxPadX*2) / 11.5); // 폰트11 기준 한 줄 글자수
+  const sLines = wrapSvgText(k.strength, charPerLine);
+  const wLines = wrapSvgText(k.weakness, charPerLine);
+  const maxLines = Math.max(sLines.length, wLines.length);
+  const boxH = boxPadTop + maxLines*15 + boxPadBot;
+  const leftX = 40;
+  const rightX2 = 40 + colW + 16;
+
+  // 강점 박스
+  parts.push(`<rect x="${leftX}" y="${y}" width="${colW}" height="${boxH}" rx="8" fill="#f0f5f0" stroke="#2a7d4f" stroke-width="1.5"/>`);
+  parts.push(T(leftX+boxPadX, y+20, '✓ 강점', {size:12,weight:700,color:'#2a7d4f'}));
+  let sy = y + boxPadTop + 6;
+  sLines.forEach(ln=>{ parts.push(T(leftX+boxPadX, sy, ln, {size:11,color:'#333'})); sy+=15; });
+
+  // 약점 박스
+  parts.push(`<rect x="${rightX2}" y="${y}" width="${colW}" height="${boxH}" rx="8" fill="#faf0f0" stroke="#b5462f" stroke-width="1.5"/>`);
+  parts.push(T(rightX2+boxPadX, y+20, '✗ 약점', {size:12,weight:700,color:'#b5462f'}));
+  let wy = y + boxPadTop + 6;
+  wLines.forEach(ln=>{ parts.push(T(rightX2+boxPadX, wy, ln, {size:11,color:'#333'})); wy+=15; });
+
+  y = y + boxH + 12;
   
   // 날개
   y+=6;
