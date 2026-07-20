@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>에니어그램 성격유형검사</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -439,6 +442,29 @@ TYPES.forEach(t=>t.items.forEach(i=>itemToType[i]=t.id));
 // 분열: 1→4→2→8→5→7→1, 9→6→3→9  /  통합은 그 역방향
 const DISINTEGRATION = {1:4, 4:2, 2:8, 8:5, 5:7, 7:1, 9:6, 6:3, 3:9};
 const INTEGRATION     = {4:1, 2:4, 8:2, 5:8, 7:5, 1:7, 6:9, 3:6, 9:3};
+// 유형별 변화 방향을 쉬운 문장으로 설명
+const GROWTH_DESC = {
+  1:"마음이 편안해지면 7번 열정가처럼 밝고 여유로워지며 즐길 줄 알게 됩니다.",
+  2:"마음이 편안해지면 4번 예술가처럼 자기 감정을 솔직하게 표현하게 됩니다.",
+  3:"마음이 편안해지면 6번 충성가처럼 협력하고 책임감 있게 행동하게 됩니다.",
+  4:"마음이 편안해지면 1번 개혁가처럼 원칙을 지키고 차분하게 실천하게 됩니다.",
+  5:"마음이 편안해지면 8번 지도자처럼 적극적이고 자신감 있게 행동하게 됩니다.",
+  6:"마음이 편안해지면 9번 중재자처럼 안정되고 평화롭게 여유를 찾게 됩니다.",
+  7:"마음이 편안해지면 5번 사색가처럼 깊이 몰입하고 진지해집니다.",
+  8:"마음이 편안해지면 2번 조력가처럼 따뜻하게 남을 배려하게 됩니다.",
+  9:"마음이 편안해지면 3번 성취자처럼 활기차고 목표를 향해 나아가게 됩니다."
+};
+const STRESS_DESC = {
+  1:"스트레스를 받으면 4번 예술가의 약점처럼 우울해지고 감정 기복이 커집니다.",
+  2:"스트레스를 받으면 8번 지도자의 약점처럼 공격적이고 지배하려 듭니다.",
+  3:"스트레스를 받으면 9번 중재자의 약점처럼 무기력해지고 회피하게 됩니다.",
+  4:"스트레스를 받으면 2번 조력가의 약점처럼 집착하고 매달리게 됩니다.",
+  5:"스트레스를 받으면 7번 열정가의 약점처럼 산만해지고 충동적이 됩니다.",
+  6:"스트레스를 받으면 3번 성취자의 약점처럼 조급해지고 겉모습에 집착합니다.",
+  7:"스트레스를 받으면 1번 개혁가의 약점처럼 비판적이고 완벽주의에 빠집니다.",
+  8:"스트레스를 받으면 5번 사색가의 약점처럼 위축되고 사람을 멀리하게 됩니다.",
+  9:"스트레스를 받으면 6번 충성가의 약점처럼 불안해지고 의심이 많아집니다."
+};
 function typeDirections(mainId){
   return {
     stress: DISINTEGRATION[mainId],   // 스트레스 상황에서 닮아가는 유형(불건강)
@@ -1262,14 +1288,27 @@ function buildResultSVG(rec){
   wrapSvgText(k.growth, 60).forEach(ln=>{ parts.push(T(40,y,ln,{size:12,color:'#444'})); y+=16; });
   y+=2;
   
-  // 변화방향
+  // 변화방향 (박스 2칸으로 구분, 쉬운 설명)
   y+=6;
-  parts.push(T(40,y,'변화 방향',{size:11,weight:700,color:'#7a7266',anchor:'start'})); y+=14;
-  parts.push(T(40,y,'안정↑',{size:11,weight:600,color:'#2a7d4f'}));
-  parts.push(T(100,y,`${k.growthType.id}번 ${k.growthType.name}`,{size:11,color:'#444'})); y+=14;
-  parts.push(T(40,y,'스트레스↑',{size:11,weight:600,color:'#b5462f'}));
-  parts.push(T(120,y,`${k.stressType.id}번 ${k.stressType.name}`,{size:11,color:'#444'})); y+=14;
-  y+=2;
+  parts.push(T(40,y,'변화 방향',{size:11,weight:700,color:'#7a7266',anchor:'start'})); y+=10;
+  const dirColW = (W-80)/2 - 8;
+  const dirRightX = 40 + dirColW + 16;
+  const dirChars = Math.floor((dirColW - 24) / 11.5);
+  const gLines = wrapSvgText(k.growthDesc || `${k.growthType.id}번 ${k.growthType.name}의 강점 발현`, dirChars);
+  const stLines = wrapSvgText(k.stressDesc || `${k.stressType.id}번 ${k.stressType.name}의 약점 발현`, dirChars);
+  const dirMaxLines = Math.max(gLines.length, stLines.length);
+  const dirBoxH = 30 + dirMaxLines*15 + 10;
+  // 안정 박스
+  parts.push(`<rect x="40" y="${y}" width="${dirColW}" height="${dirBoxH}" rx="8" fill="#f0f5f0" stroke="#2a7d4f" stroke-width="1.5"/>`);
+  parts.push(T(52, y+20, '😊 안정될 때', {size:11,weight:700,color:'#2a7d4f'}));
+  let gy = y+38;
+  gLines.forEach(ln=>{ parts.push(T(52, gy, ln, {size:11,color:'#333'})); gy+=15; });
+  // 스트레스 박스
+  parts.push(`<rect x="${dirRightX}" y="${y}" width="${dirColW}" height="${dirBoxH}" rx="8" fill="#faf0f0" stroke="#b5462f" stroke-width="1.5"/>`);
+  parts.push(T(dirRightX+12, y+20, '😰 스트레스 받을 때', {size:11,weight:700,color:'#b5462f'}));
+  let sty = y+38;
+  stLines.forEach(ln=>{ parts.push(T(dirRightX+12, sty, ln, {size:11,color:'#333'})); sty+=15; });
+  y += dirBoxH + 8;
   
   // 추천직업
   y+=6;
@@ -1588,6 +1627,7 @@ function coupleKeywords(person){
     desc: main.desc,
     strength: main.strength, weakness: main.weakness, growth: main.growth, motto: main.motto, jobs: main.jobs,
     stressType: typeById(dir.stress), growthType: typeById(dir.growth),
+    growthDesc: GROWTH_DESC[w.main], stressDesc: STRESS_DESC[w.main],
   };
 }
 
@@ -1628,13 +1668,13 @@ function personCardBody(k, color, name){
     <div style="margin-bottom:16px;">
       <div style="font-size:12px;font-weight:700;color:#7a7266;text-transform:uppercase;letter-spacing:.08em;padding-bottom:6px;border-bottom:2px solid var(--line);margin-bottom:10px;">⚡ 변화 방향</div>
       <div style="display:grid;gap:10px;">
-        <div style="padding:10px;background:linear-gradient(135deg, #f0f5f0, transparent);border-radius:6px;border-left:3px solid #2a7d4f;">
-          <div style="font-size:11px;font-weight:600;color:#2a7d4f;margin-bottom:3px;">안정될 때 → ${k.growthType.id}번 ${k.growthType.name}</div>
-          <div style="font-size:12px;color:var(--muted);">강점이 더 발현되고 성장합니다</div>
+        <div style="padding:12px;background:linear-gradient(135deg, #f0f5f0, transparent);border-radius:6px;border-left:3px solid #2a7d4f;">
+          <div style="font-size:12px;font-weight:700;color:#2a7d4f;margin-bottom:4px;">😊 안정될 때</div>
+          <div style="font-size:13px;color:var(--ink);line-height:1.6;">${k.growthDesc||''}</div>
         </div>
-        <div style="padding:10px;background:linear-gradient(135deg, #faf0f0, transparent);border-radius:6px;border-left:3px solid #b5462f;">
-          <div style="font-size:11px;font-weight:600;color:#b5462f;margin-bottom:3px;">스트레스 받을 때 → ${k.stressType.id}번 ${k.stressType.name}</div>
-          <div style="font-size:12px;color:var(--muted);">약점이 드러나는 경향이 있습니다</div>
+        <div style="padding:12px;background:linear-gradient(135deg, #faf0f0, transparent);border-radius:6px;border-left:3px solid #b5462f;">
+          <div style="font-size:12px;font-weight:700;color:#b5462f;margin-bottom:4px;">😰 스트레스 받을 때</div>
+          <div style="font-size:13px;color:var(--ink);line-height:1.6;">${k.stressDesc||''}</div>
         </div>
       </div>
     </div>
