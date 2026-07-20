@@ -1047,50 +1047,23 @@ async function submitSurvey(){
 
 /* ---------- 결과 ---------- */
 function radarSVG(scores){
-  const size=320, cx=size/2, cy=size/2, R=118, maxScore=45, n=9;
-  // 9를 맨 위(12시)로, 시계방향 9,1,2,3,4,5,6,7,8
   const ORDER = [9,1,2,3,4,5,6,7,8];
-  const angle = i => (Math.PI*2*i/n) - Math.PI/2;
-  const pt = (i,r) => [cx + r*Math.cos(angle(i)), cy + r*Math.sin(angle(i))];
-  let rings='';
-  [0.25,0.5,0.75,1].forEach(f=>{
-    let pts=[]; for(let i=0;i<n;i++){ const [x,y]=pt(i,R*f); pts.push(`${x},${y}`); }
-    rings += `<polygon points="${pts.join(' ')}" fill="none" stroke="#d9d0bd" stroke-width="1"/>`;
+  const W = 400;
+  let y = 40;
+  const parts = [];
+  const T=(x,yy,s,opt={})=>`<text x="${x}" y="${yy}" font-family="'Noto Sans KR',sans-serif" font-size="${opt.size||16}" fill="${opt.color||'#20242b'}" text-anchor="${opt.anchor||'start'}" font-weight="${opt.weight||400}">${esc(s)}</text>`;
+  
+  parts.push(T(W/2, y, '유형 분포', {size:18, weight:700, anchor:'middle'})); y+=8;
+  
+  ORDER.forEach(id=>{
+    y+=28;
+    const t = TYPES.find(x=>x.id===id);
+    parts.push(T(W/2, y, `${id} ${t.name}`, {size:14, weight:600, anchor:'middle'}));
   });
-  let spokes='', labels='';
-  for(let i=0;i<n;i++){
-    const [x,y]=pt(i,R);
-    spokes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#d9d0bd" stroke-width="1"/>`;
-    const typeObj = TYPES.find(t=>t.id===ORDER[i]);
-    const typeLabel = `${ORDER[i]} ${typeObj?.name||''}`;
-    
-    // 각 방향별 라벨 거리와 정렬 조정 (숫자와 더 멀리 떨어뜨림)
-    let lx, ly, anchor='middle', baseline='middle', offset=36;
-    const ang = angle(i);
-    
-    // 12시 방향 (i=0): 위쪽
-    if(i===0) { offset=42; baseline='bottom'; ly=cy + R*Math.sin(ang) - offset; lx=cx + R*Math.cos(ang); }
-    // 3시 방향 (i=2): 우측
-    else if(i===2) { offset=36; anchor='start'; lx=cx + R*Math.cos(ang) + offset; ly=cy + R*Math.sin(ang); }
-    // 6시 방향 (i=4): 아래쪽
-    else if(i===4) { offset=42; baseline='top'; ly=cy + R*Math.sin(ang) + offset; lx=cx + R*Math.cos(ang); }
-    // 9시 방향 (i=6): 좌측
-    else if(i===6) { offset=36; anchor='end'; lx=cx + R*Math.cos(ang) - offset; ly=cy + R*Math.sin(ang); }
-    // 기타 방향
-    else {
-      const [lx_tmp, ly_tmp] = pt(i, R+36);
-      lx = lx_tmp; ly = ly_tmp;
-    }
-    
-    if(lx===undefined) lx = cx + R*Math.cos(ang);
-    if(ly===undefined) ly = cy + R*Math.sin(ang);
-    
-    labels += `<text x="${lx}" y="${ly}" font-size="9.5" font-weight="600" text-anchor="${anchor}" dominant-baseline="${baseline}" fill="#20242b">${typeLabel}</text>`;
-  }
-  let dp=[]; for(let i=0;i<n;i++){ dp.push(pt(i, ((scores[ORDER[i]]||0)/maxScore)*R)); }
-  const poly = dp.map(p=>p.join(',')).join(' ');
-  const dots = dp.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${typeColor(ORDER[i])}"/>`).join('');
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${rings}${spokes}<polygon points="${poly}" fill="rgba(35,41,70,0.18)" stroke="#232946" stroke-width="2"/>${dots}${labels}</svg>`;
+  
+  y+=40;
+  const H = y;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#f6f2ea"/>${parts.join('')}</svg>`;
 }
 
 function buildPrintContent(rec){
@@ -1452,63 +1425,14 @@ function renderResult(app){
 }
 
 function drawRadar(container, scores){
-  const size=320, cx=size/2, cy=size/2, R=118, maxScore=45;
-  const n=9;
-  const ORDER = [9,1,2,3,4,5,6,7,8]; // 9를 12시(맨위)로
-  const angle = i => (Math.PI*2*i/n) - Math.PI/2;
-  const pt = (i, r) => [cx + r*Math.cos(angle(i)), cy + r*Math.sin(angle(i))];
-
-  let rings='';
-  [0.25,0.5,0.75,1].forEach(f=>{
-    let pts=[];
-    for(let i=0;i<n;i++){ const [x,y]=pt(i,R*f); pts.push(`${x},${y}`); }
-    rings += `<polygon points="${pts.join(' ')}" fill="none" stroke="#d9d0bd" stroke-width="1"/>`;
+  const ORDER = [9,1,2,3,4,5,6,7,8];
+  let html = `<div style="text-align:center;padding:20px 0;">`;
+  ORDER.forEach(id=>{
+    const t = TYPES.find(x=>x.id===id);
+    html += `<div style="margin:12px 0;font-size:16px;font-weight:600;color:var(--navy);">${id} ${t.name}</div>`;
   });
-
-  let spokes='', labels='';
-  for(let i=0;i<n;i++){
-    const [x,y]=pt(i,R);
-    spokes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#d9d0bd" stroke-width="1"/>`;
-    const typeObj = TYPES.find(t=>t.id===ORDER[i]);
-    const typeLabel = `${ORDER[i]}${typeObj?.name||''}`;
-    
-    // 각 방향별 라벨 거리와 정렬 조정 (숫자와 더 멀리 떨어뜨림)
-    let lx, ly, anchor='middle', baseline='middle', offset=36;
-    const ang = angle(i);
-    
-    // 12시 방향 (i=0): 위쪽
-    if(i===0) { offset=42; baseline='bottom'; ly=cy + R*Math.sin(ang) - offset; lx=cx + R*Math.cos(ang); }
-    // 3시 방향 (i=2): 우측
-    else if(i===2) { offset=36; anchor='start'; lx=cx + R*Math.cos(ang) + offset; ly=cy + R*Math.sin(ang); }
-    // 6시 방향 (i=4): 아래쪽
-    else if(i===4) { offset=42; baseline='top'; ly=cy + R*Math.sin(ang) + offset; lx=cx + R*Math.cos(ang); }
-    // 9시 방향 (i=6): 좌측
-    else if(i===6) { offset=36; anchor='end'; lx=cx + R*Math.cos(ang) - offset; ly=cy + R*Math.sin(ang); }
-    // 기타 방향
-    else {
-      const [lx_tmp, ly_tmp] = pt(i, R+36);
-      lx = lx_tmp; ly = ly_tmp;
-    }
-    
-    labels += `<text x="${lx}" y="${ly}" font-size="9.5" font-weight="600" text-anchor="${anchor}" dominant-baseline="${baseline}" fill="#20242b" font-family="Noto Sans KR, sans-serif">${typeLabel}</text>`;
-  }
-
-  let dataPts=[];
-  for(let i=0;i<n;i++){
-    const s = scores[ORDER[i]]||0;
-    const r = (s/maxScore)*R;
-    dataPts.push(pt(i,r));
-  }
-  const dataPoly = dataPts.map(p=>p.join(',')).join(' ');
-  const dots = dataPts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${typeColor(ORDER[i])}"/>`).join('');
-
-  container.innerHTML = `
-    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      ${rings}${spokes}
-      <polygon points="${dataPoly}" fill="rgba(35,41,70,0.18)" stroke="#232946" stroke-width="2"/>
-      ${dots}${labels}
-    </svg>
-  `;
+  html += `</div>`;
+  container.innerHTML = html;
 }
 
 /* ---------- 커플 프로파일 ---------- */
