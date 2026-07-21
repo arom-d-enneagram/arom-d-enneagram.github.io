@@ -894,7 +894,9 @@ function birthToAge(birth){
   if(!birth) return '';
   const p = birth.split('-'); if(p.length<1) return '';
   const by = +p[0]; if(!by) return '';
-  return (new Date().getFullYear() - by + 1); // 한국식 나이(대략)
+  const age = (new Date().getFullYear() - by + 1); // 한국식 나이(대략)
+  if(age < 0 || age > 120) return ''; // 이상값 방어
+  return age;
 }
 // 만나이 계산 (생일 지났는지 반영)
 function birthToIntlAge(birth){
@@ -906,6 +908,7 @@ function birthToIntlAge(birth){
   let age = now.getFullYear() - y;
   const mm = now.getMonth()+1, dd = now.getDate();
   if(mm < m || (mm===m && dd < d)) age--; // 아직 올해 생일 안 지남
+  if(age < 0 || age > 120) return ''; // 이상값 방어
   return age;
 }
 
@@ -2040,20 +2043,27 @@ async function renderList(app){
   }
   const allList = (await getResponses()).slice().reverse();
 
-  // 검색 필터 (초성 검색 지원: "ㅅ" → 손성지, 서영... / 일반 검색: 부분일치)
+  // 검색 필터
   const rawQ = (state.listSearch||'').trim();
   const q = rawQ.toLowerCase();
   const choseongMode = isChoseongQuery(rawQ);
-  const filtered = q ? allList.filter(rec=>{
-    const top = TYPES.map(t=>({...t, score:rec.scores[t.id]})).sort((a,b)=>b.score-a.score)[0];
-    const fields = [rec.name, rec.job, rec.relation, top.name].filter(Boolean);
-    if(choseongMode){
-      // 초성으로 검색: 각 필드의 초성이 검색 초성으로 시작하거나 포함하면 매치
-      return fields.some(f=>toChoseong(f).includes(rawQ));
-    }
-    const hay = fields.join(' ').toLowerCase();
-    return hay.includes(q);
-  }) : allList;
+  let filtered;
+  if(!q){
+    filtered = allList;
+  } else if(choseongMode){
+    // 초성 검색: 이름 초성이 검색어로 "시작"하는 사람 우선, 없으면 이름에 초성 "포함"
+    const nameCho = rec => toChoseong(rec.name||'');
+    const starts = allList.filter(rec => nameCho(rec).startsWith(rawQ));
+    const contains = allList.filter(rec => !nameCho(rec).startsWith(rawQ) && nameCho(rec).includes(rawQ));
+    filtered = [...starts, ...contains];
+  } else {
+    // 일반 검색: 이름·유형·직업 부분일치
+    filtered = allList.filter(rec=>{
+      const top = TYPES.map(t=>({...t, score:rec.scores[t.id]})).sort((a,b)=>b.score-a.score)[0];
+      const hay = [rec.name, rec.job, rec.relation, top.name].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
 
   // 페이지네이션 (20개씩)
   const PER = 20;
