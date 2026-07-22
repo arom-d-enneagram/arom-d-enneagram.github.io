@@ -557,6 +557,32 @@ function toChoseong(str){
 function isChoseongQuery(q){
   return q.length>0 && [...q].every(c=>_CHOSEONG.includes(c));
 }
+// 한 글자의 초성 반환 (한글 음절이 아니면 null)
+function _choOf(ch){
+  const code = ch.charCodeAt(0);
+  if(code >= 0xAC00 && code <= 0xD7A3) return _CHOSEONG[Math.floor((code - 0xAC00) / 588)];
+  return null;
+}
+// 검색어를 글자 단위로 비교 (초성·완성글자 섞여도 매칭: "김ㅇ" → "김아름" ✓)
+function _koMatchAt(name, q, start){
+  for(let i=0;i<q.length;i++){
+    const n = name[start+i];
+    if(n === undefined) return false;
+    const qc = q[i];
+    if(_CHOSEONG.includes(qc)){
+      if(_choOf(n) !== qc) return false;        // 초성 비교
+    } else if(n !== qc){
+      return false;                              // 완성글자는 그대로 비교
+    }
+  }
+  return true;
+}
+function koStartsWith(name, q){ return _koMatchAt(String(name||''), q, 0); }
+function koIncludes(name, q){
+  const s = String(name||'');
+  for(let i=0; i+q.length<=s.length; i++){ if(_koMatchAt(s, q, i)) return true; }
+  return false;
+}
 
 /* ================= 상태 ================= */
 // 메인 주소(/) = 관리자, 응답자는 ?u 또는 #user 로 접속
@@ -732,7 +758,7 @@ async function renderLanding(app){
         <button class="btn-ghost" id="adminLockBtn" style="flex:1;">로그아웃</button>
       </div>
       <div style="text-align:center;margin-top:12px;font-size:11.5px;color:var(--muted);">
-        버전 <b>v8</b> · 2026.07.22
+        버전 <b>v9</b> · 2026.07.22
       </div>
     </div>
   `;
@@ -2054,18 +2080,19 @@ async function renderList(app){
     let filtered;
     if(!q){
       filtered = allList;
-    } else if(isChoseongQuery(rawQ)){
-      // 초성 검색: 이름 초성이 검색어로 "시작"하는 사람 우선, 그다음 "포함"
-      const nameCho = rec => toChoseong(rec.name||'');
-      const starts = allList.filter(rec => nameCho(rec).startsWith(rawQ));
-      const contains = allList.filter(rec => !nameCho(rec).startsWith(rawQ) && nameCho(rec).includes(rawQ));
-      filtered = [...starts, ...contains];
     } else {
-      filtered = allList.filter(rec=>{
+      // 이름: 글자 단위 매칭(초성·완성글자 혼합 가능) — 앞에서부터 일치하는 사람 우선
+      const starts = allList.filter(rec => koStartsWith(rec.name, rawQ));
+      const startIds = new Set(starts.map(r=>r.id));
+      const others = allList.filter(rec=>{
+        if(startIds.has(rec.id)) return false;
+        if(koIncludes(rec.name, rawQ)) return true;
+        // 이름이 아니면 유형·직업·관계도 일반 검색
         const top = TYPES.map(t=>({...t, score:rec.scores[t.id]})).sort((a,b)=>b.score-a.score)[0];
-        const hay = [rec.name, rec.job, rec.relation, top.name].filter(Boolean).join(' ').toLowerCase();
+        const hay = [rec.job, rec.relation, top.name].filter(Boolean).join(' ').toLowerCase();
         return hay.includes(q);
       });
+      filtered = [...starts, ...others];
     }
     if(state.listPage===undefined) state.listPage = 0;
     const totalPages = Math.max(1, Math.ceil(filtered.length / PER));
